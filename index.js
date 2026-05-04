@@ -35,6 +35,7 @@ const STATE = {
     READY: 'ready',
     MISSING: 'missing',
     RESTART: 'restart',
+    UPDATE: 'update',
     DISABLED: 'disabled',
 };
 
@@ -294,7 +295,7 @@ async function checkPluginStatus() {
             // Compare versions
             if (installedServerVersion < REQUIRED_SERVER_VERSION) {
                 logger.info(`Server plugin out of date. Installed: ${installedServerVersion}, Required: ${REQUIRED_SERVER_VERSION}`);
-                return STATE.RESTART;
+                return STATE.UPDATE;
             } else {
                 return STATE.READY;
             }
@@ -316,7 +317,7 @@ async function updateSetupUI() {
     const container = document.getElementById('st-mobile-theme-color-settings');
     if (!container) return;
     
-    const states = ['ready', 'missing', 'restart', 'disabled'];
+    const states = ['ready', 'missing', 'restart', 'update', 'disabled'];
     states.forEach(s => {
         const el = document.getElementById(`st-mobile-theme-color-state-${s}`);
         if (el) el.classList.add('hidden');

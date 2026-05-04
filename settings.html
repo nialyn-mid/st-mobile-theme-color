@@ -45,6 +45,18 @@
                         <p>The server plugin is installed but not active. Please restart your SillyTavern server.</p>
                     </div>
 
+                    <!-- State: Update Required -->
+                    <div id="st-mobile-theme-color-state-update" class="st-mobile-theme-color-info-block hidden">
+                        <p class="text_warning"><i class="fa-solid fa-cloud-arrow-up"></i> <b>Update Required</b></p>
+                        <p>Your server plugin is out of date. Please run the update command below:</p>
+                        <div class="flex-container gap1">
+                            <code class="st-mobile-theme-color-command flex1"></code>
+                            <button class="st-mobile-theme-color-copy-btn menu_button small_button" title="Copy"><i
+                                    class="fa-solid fa-copy"></i></button>
+                        </div>
+                        <p><small>Restart the server after running the command.</small></p>
+                    </div>
+
                     <!-- State: Ready -->
                     <div id="st-mobile-theme-color-state-ready" class="st-mobile-theme-color-info-block hidden">
                         <p class="text_success"><i class="fa-solid fa-circle-check"></i> <b>Server Plugin Active</b></p>
