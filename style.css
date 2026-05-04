@@ -36,3 +36,35 @@
     font-family: var(--mono-font-family, monospace);
     font-size: 1.1em;
 }
+
+.st-mobile-theme-color-info-block {
+    padding: 10px;
+    border-radius: 5px;
+    background: rgba(0, 0, 0, 0.2);
+    border-left: 4px solid var(--SmartThemeBorderColor);
+    margin-bottom: 10px;
+    font-size: 0.9em;
+}
+
+.st-mobile-theme-color-info-block p {
+    margin: 5px 0;
+}
+
+.st-mobile-theme-color-command {
+    background: rgba(0, 0, 0, 0.4);
+    padding: 8px;
+    border-radius: 3px;
+    font-family: var(--mono-font-family, monospace);
+    word-break: break-all;
+    user-select: all;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.st-mobile-theme-color-info-block.hidden {
+    display: none;
+}
+
+.text_success { color: #4caf50; }
+.text_warning { color: #ff9800; }
+.text_error { color: #f44336; }
+.text_info { color: #2196f3; }

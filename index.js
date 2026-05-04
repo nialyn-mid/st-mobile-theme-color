@@ -15,23 +15,7 @@ const getModuleName = () => {
 
 const MODULE_NAME = getModuleName();
 
-// Pre-apply last known color from localStorage to avoid flash of wrong color
-(function preApplyColor() {
-    try {
-        const lastColor = localStorage.getItem('st-mobile-theme-color-last');
-        if (lastColor) {
-            let meta = document.querySelector('meta[name="theme-color"]');
-            if (!meta) {
-                meta = document.createElement('meta');
-                meta.name = 'theme-color';
-                document.head.appendChild(meta);
-            }
-            meta.content = lastColor;
-        }
-    } catch (e) {
-        // Ignore localStorage errors
-    }
-})();
+
 
 const defaultSettings = {
     colorVariable: '--SmartThemeChatTintColor',
@@ -45,6 +29,16 @@ const defaultSettings = {
 };
 
 let settings = { ...defaultSettings };
+
+// State constants
+const STATE = {
+    READY: 'ready',
+    MISSING: 'missing',
+    RESTART: 'restart',
+    DISABLED: 'disabled',
+};
+
+let currentState = STATE.MISSING;
 
 /**
  * Converts an RGBA color string to Hex.
@@ -69,67 +63,7 @@ function rgbaToHex(rgba) {
 let originalManifest = null;
 let manifestBaseUrl = null;
 
-/**
- * Updates the PWA manifest theme_color and background_color.
- * @param {string} themeColor - The theme color.
- * @param {string} bgColor - The background color.
- */
-async function updatePwaManifest(themeColor, bgColor) {
-    if (!settings.syncManifest) return;
 
-    const link = document.querySelector('link[rel="manifest"]');
-    if (!link) return;
-
-    if (!originalManifest) {
-        try {
-            const manifestUrl = new URL(link.getAttribute('href'), window.location.href).href;
-            manifestBaseUrl = manifestUrl.substring(0, manifestUrl.lastIndexOf('/') + 1);
-            const response = await fetch(manifestUrl);
-            originalManifest = await response.json();
-        } catch (e) {
-            console.error('[Mobile Theme Color] Failed to fetch original manifest:', e);
-            return;
-        }
-    }
-
-    const updatedManifest = {
-        ...originalManifest,
-        theme_color: themeColor,
-        background_color: bgColor
-    };
-
-    // Normalize relative URLs in the manifest to be absolute
-    // This is because the manifest is now a blob: URL and relative paths won't resolve correctly.
-    // Normalize relative URLs in the manifest to be absolute
-    // This is because the manifest is now a blob: URL and relative paths won't resolve correctly.
-    if (updatedManifest.icons) {
-        updatedManifest.icons = updatedManifest.icons.map(icon => ({
-            ...icon,
-            src: new URL(icon.src, manifestBaseUrl).href
-        }));
-    }
-
-    if (updatedManifest.start_url) {
-        updatedManifest.start_url = new URL(updatedManifest.start_url, manifestBaseUrl).href;
-    }
-
-    const blob = new Blob([JSON.stringify(updatedManifest)], { type: 'application/manifest+json' });
-
-    const manifestUrl = URL.createObjectURL(blob);
-
-    // Revoke old object URL if it exists
-    if (link.dataset.isBlob === 'true') {
-        URL.revokeObjectURL(link.href);
-    }
-
-    // Remove and re-add link to force refresh
-    const newLink = link.cloneNode();
-    newLink.href = manifestUrl;
-    newLink.dataset.isBlob = 'true';
-    link.parentNode.replaceChild(newLink, link);
-
-    logger.debug(`PWA manifest updated and refreshed. Theme: ${themeColor}, BG: ${bgColor}`);
-}
 
 /**
  * Updates the theme-color meta tag and manifest.
@@ -161,25 +95,17 @@ function updateThemeColor() {
     }
 
 
-    // Update meta tag
-    let meta = document.querySelector('meta[name="theme-color"]');
-    if (!meta) {
-        meta = document.createElement('meta');
-        meta.name = 'theme-color';
-        document.head.appendChild(meta);
-    }
-    meta.content = themeColor;
-
-    logger.info(`Applied meta color: ${themeColor}`);
-
-    // Cache for pre-boot application
+    // Cache for pre-boot application (used by the server-side injected script)
     try {
         localStorage.setItem('st-mobile-theme-color-last', themeColor);
+        if (bgColor) {
+            localStorage.setItem('st-mobile-theme-color-bg-last', bgColor);
+        }
     } catch (e) {
         // Ignore
     }
 
-    updatePwaManifest(themeColor, bgColor || themeColor);
+    logger.info(`Resolved and cached color: ${themeColor}`);
 }
 
 /**
@@ -305,7 +231,105 @@ function initSettingsUI(html) {
 /**
  * Entry point for the extension.
  */
+/**
+ * Detects the current environment and returns an appropriate installation command.
+ */
+function getInstallCommand() {
+    const isWin = navigator.platform.includes('Win');
+    const slash = isWin ? '\\' : '/';
+    
+    // Most users run commands from the ST root
+    let fullModuleName = MODULE_NAME;
+    if (isWin) {
+        fullModuleName = fullModuleName.replace(/\//g, '\\');
+    }
+    
+    const relPath = `public${slash}scripts${slash}extensions${slash}${fullModuleName}${slash}install${slash}install-plugin.cjs`;
+    return `node ${relPath}`;
+}
+
+/**
+ * Checks the status of the server-side plugin.
+ */
+async function checkPluginStatus() {
+    try {
+        const response = await fetch('/api/plugins/st-mobile-theme-color/status');
+        if (response.ok) {
+            return STATE.READY;
+        }
+        
+        // If we get a 404, it might be missing or plugins are disabled
+        // We check if the /api/plugins root even exists by hitting a dummy
+        const rootCheck = await fetch('/api/plugins/check-exists-dummy');
+        if (rootCheck.status === 404) {
+            // If the root /api/plugins/ exists, it should return 404
+            // But if plugins are disabled, the router is not even registered.
+            // This is hard to distinguish from a simple 404.
+        }
+    } catch (e) {
+        // Network error
+    }
+    
+    // Fallback: check if the folder exists on the server (hacky via extension discovery?)
+    // For now, we'll just use 'missing' and the script will handle both.
+    return STATE.MISSING;
+}
+
+/**
+ * Updates the Setup Center UI based on current state.
+ */
+async function updateSetupUI() {
+    const status = await checkPluginStatus();
+    currentState = status;
+    
+    const container = document.getElementById('st-mobile-theme-color-settings');
+    if (!container) return;
+    
+    const states = ['ready', 'missing', 'restart', 'disabled'];
+    states.forEach(s => {
+        const el = document.getElementById(`st-mobile-theme-color-state-${s}`);
+        if (el) el.classList.add('hidden');
+    });
+    
+    const currentEl = document.getElementById(`st-mobile-theme-color-state-${status}`);
+    if (currentEl) currentEl.classList.remove('hidden');
+    
+    // Show/hide main settings
+    const mainSettings = document.getElementById('st-mobile-theme-color-main-settings');
+    if (mainSettings) {
+        if (status === STATE.READY) {
+            mainSettings.classList.remove('hidden');
+        } else {
+            mainSettings.classList.remove('hidden'); // Still allow manual settings even if plugin missing
+        }
+    }
+    
+    // Update command text
+    const cmdText = getInstallCommand();
+    const cmdEls = document.querySelectorAll('.st-mobile-theme-color-command');
+    cmdEls.forEach(el => {
+        el.textContent = cmdText;
+    });
+}
+
 async function init() {
+    // Setup Center events
+    jQuery(document).on('click', '.st-mobile-theme-color-copy-btn', function() {
+        const cmd = getInstallCommand();
+        navigator.clipboard.writeText(cmd);
+        toastr.success('Command copied to clipboard!');
+    });
+
+    // Check plugin status periodically or on show
+    updateSetupUI();
+
+    // Re-check when the drawer is opened
+    jQuery(document).on('click', '.inline-drawer-toggle', function() {
+        if (jQuery(this).closest('#st-mobile-theme-color-settings').length) {
+            updateSetupUI();
+        }
+    });
+
     const context = getContext();
 
     logger.debug('Extension module name:', MODULE_NAME);
