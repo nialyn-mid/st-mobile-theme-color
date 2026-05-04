@@ -14,23 +14,27 @@
                 <div id="st-mobile-theme-color-setup-center">
                     <!-- State: Plugins Disabled -->
                     <div id="st-mobile-theme-color-state-disabled" class="st-mobile-theme-color-info-block hidden">
-                        <p class="text_error"><i class="fa-solid fa-triangle-exclamation"></i> <b>Server Plugins Disabled</b></p>
-                        <p>Server plugins must be enabled in <code>config.yaml</code> to allow the extension to modify browser and PWA colors.</p>
-                        <p>Run the command below to enable plugins and install the helper:</p>
+                        <p class="text_error"><i class="fa-solid fa-triangle-exclamation"></i> <b>Server Plugins
+                                Disabled</b></p>
+                        <p>Server plugins must be enabled in <code>config.yaml</code> to allow the extension to modify
+                            browser and PWA colors.</p>
+                        <p>Run the command below to enable plugins and install the plugin:</p>
                         <div class="flex-container gap1">
                             <code class="st-mobile-theme-color-command flex1"></code>
-                            <button class="st-mobile-theme-color-copy-btn menu_button small_button" title="Copy"><i class="fa-solid fa-copy"></i></button>
+                            <button class="st-mobile-theme-color-copy-btn menu_button small_button" title="Copy"><i
+                                    class="fa-solid fa-copy"></i></button>
                         </div>
                     </div>
 
                     <!-- State: Plugin Missing -->
                     <div id="st-mobile-theme-color-state-missing" class="st-mobile-theme-color-info-block hidden">
                         <p class="text_warning"><i class="fa-solid fa-circle-info"></i> <b>Setup Required</b></p>
-                        <p>The server component must be installed for theme colors to apply to the browser UI and PWA.</p>
+                        <p>The server plugin must be installed for theme colors to apply to the browser UI and PWA.</p>
                         <p><small>Run this from your SillyTavern installation directory:</small></p>
                         <div class="flex-container gap1">
                             <code class="st-mobile-theme-color-command flex1"></code>
-                            <button class="st-mobile-theme-color-copy-btn menu_button small_button" title="Copy"><i class="fa-solid fa-copy"></i></button>
+                            <button class="st-mobile-theme-color-copy-btn menu_button small_button" title="Copy"><i
+                                    class="fa-solid fa-copy"></i></button>
                         </div>
                         <p><small>Restart the server after running the command.</small></p>
                     </div>
@@ -38,12 +42,12 @@
                     <!-- State: Restart Required -->
                     <div id="st-mobile-theme-color-state-restart" class="st-mobile-theme-color-info-block hidden">
                         <p class="text_info"><i class="fa-solid fa-rotate"></i> <b>Restart Required</b></p>
-                        <p>The server component is installed but not active. Please restart your SillyTavern server.</p>
+                        <p>The server plugin is installed but not active. Please restart your SillyTavern server.</p>
                     </div>
 
                     <!-- State: Ready -->
                     <div id="st-mobile-theme-color-state-ready" class="st-mobile-theme-color-info-block hidden">
-                        <p class="text_success"><i class="fa-solid fa-circle-check"></i> <b>Server Helper Active</b></p>
+                        <p class="text_success"><i class="fa-solid fa-circle-check"></i> <b>Server Plugin Active</b></p>
                         <p>Theme colors are now synchronized with the mobile browser UI and PWA.</p>
                     </div>
                 </div>

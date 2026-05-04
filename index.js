@@ -38,7 +38,12 @@ const STATE = {
     DISABLED: 'disabled',
 };
 
+// Minimum version of the server plugin required by this frontend version
+const REQUIRED_SERVER_VERSION = '1.2.0';
+
 let currentState = STATE.MISSING;
+let installedServerVersion = '0.0.0';
+
 
 /**
  * Converts an RGBA color string to Hex.
@@ -275,30 +280,29 @@ function getInstallCommand() {
     return `node ${relPath}`;
 }
 
+
 /**
- * Checks the status of the server-side plugin.
+ * Checks if the server-side plugin is installed and active.
  */
 async function checkPluginStatus() {
     try {
         const response = await fetch('/api/plugins/st-mobile-theme-color/status');
         if (response.ok) {
-            return STATE.READY;
-        }
-        
-        // If we get a 404, it might be missing or plugins are disabled
-        // We check if the /api/plugins root even exists by hitting a dummy
-        const rootCheck = await fetch('/api/plugins/check-exists-dummy');
-        if (rootCheck.status === 404) {
-            // If the root /api/plugins/ exists, it should return 404
-            // But if plugins are disabled, the router is not even registered.
-            // This is hard to distinguish from a simple 404.
+            const data = await response.json();
+            installedServerVersion = data.version || '1.0.0';
+            
+            // Compare versions
+            if (installedServerVersion < REQUIRED_SERVER_VERSION) {
+                logger.info(`Server plugin out of date. Installed: ${installedServerVersion}, Required: ${REQUIRED_SERVER_VERSION}`);
+                return STATE.RESTART;
+            } else {
+                return STATE.READY;
+            }
         }
     } catch (e) {
-        // Network error
+        // Network error or missing plugin
     }
     
-    // Fallback: check if the folder exists on the server (hacky via extension discovery?)
-    // For now, we'll just use 'missing' and the script will handle both.
     return STATE.MISSING;
 }
 
