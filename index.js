@@ -1,4 +1,5 @@
 import { getContext, renderExtensionTemplateAsync } from '/scripts/extensions.js';
+import { logger, setLogLevel, LOG_LEVELS } from './js/logger.js';
 
 // Dynamically determine the module name/path for template loading
 const getModuleName = () => {
@@ -40,6 +41,7 @@ const defaultSettings = {
     manualBgColor: '#000000',
     useManualBg: false,
     syncManifest: true,
+    logLevel: LOG_LEVELS.WARN,
 };
 
 let settings = { ...defaultSettings };
@@ -50,8 +52,9 @@ let settings = { ...defaultSettings };
  * @returns {string} - The Hex color string.
  */
 function rgbaToHex(rgba) {
-    if (!rgba) return '#000000';
+    if (!rgba) return null;
     // Match both rgb and rgba
+
     const match = rgba.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
     if (!match) return rgba;
 
@@ -125,7 +128,7 @@ async function updatePwaManifest(themeColor, bgColor) {
     newLink.dataset.isBlob = 'true';
     link.parentNode.replaceChild(newLink, link);
 
-    console.log(`[Mobile Theme Color] PWA manifest updated and refreshed. Theme: ${themeColor}, BG: ${bgColor}`);
+    logger.debug(`PWA manifest updated and refreshed. Theme: ${themeColor}, BG: ${bgColor}`);
 }
 
 /**
@@ -152,7 +155,11 @@ function updateThemeColor() {
         bgColor = rgbaToHex(rawBgColor);
     }
 
-    if (!themeColor) return;
+    if (!themeColor) {
+        logger.debug('Theme color not ready yet (CSS variables may not be loaded)');
+        return;
+    }
+
 
     // Update meta tag
     let meta = document.querySelector('meta[name="theme-color"]');
@@ -163,7 +170,7 @@ function updateThemeColor() {
     }
     meta.content = themeColor;
 
-    console.log(`[Mobile Theme Color] Applied meta color: ${themeColor}`);
+    logger.info(`Applied meta color: ${themeColor}`);
 
     // Cache for pre-boot application
     try {
@@ -182,7 +189,11 @@ function saveSettings() {
     const context = getContext();
     context.extensionSettings[MODULE_NAME] = settings;
 
-    if (typeof context.saveSettings === 'function') {
+    logger.debug('Saving settings for', MODULE_NAME, settings);
+
+    if (typeof context.saveSettingsDebounced === 'function') {
+        context.saveSettingsDebounced();
+    } else if (typeof context.saveSettings === 'function') {
         context.saveSettings();
     } else if (typeof window.saveSettingsApp === 'function') {
         window.saveSettingsApp();
@@ -278,6 +289,15 @@ function initSettingsUI(html) {
         updateThemeColor();
     });
 
+    // Bind "Log Level" dropdown
+    const $logLevel = $settings.find('#st-mobile-theme-color-log-level');
+    $logLevel.val(settings.logLevel).on('change', function () {
+        settings.logLevel = parseInt($(this).val());
+        setLogLevel(settings.logLevel);
+        saveSettings();
+        logger.info(`Log level set to: ${$(this).find('option:selected').text()}`);
+    });
+
     $('#extensions_settings').append($settings);
 
 }
@@ -288,10 +308,27 @@ function initSettingsUI(html) {
 async function init() {
     const context = getContext();
 
+    logger.debug('Extension module name:', MODULE_NAME);
+    logger.debug('Context extensionSettings keys:', Object.keys(context.extensionSettings));
+
+    const loadSettings = () => {
+        // Try exact match, then try fallback to just the folder name
+        const folderName = MODULE_NAME.split('/').pop();
+        const savedSettings = context.extensionSettings[MODULE_NAME] || context.extensionSettings[folderName];
+        
+        if (savedSettings) {
+            logger.info('Loaded settings for', MODULE_NAME, savedSettings);
+            settings = Object.assign(settings, savedSettings);
+            setLogLevel(settings.logLevel);
+        } else {
+            logger.info('No saved settings found, using defaults.');
+        }
+    };
+
+
     // Load settings
-    if (context.extensionSettings[MODULE_NAME]) {
-        settings = Object.assign(settings, context.extensionSettings[MODULE_NAME]);
-    }
+    loadSettings();
+    logger.debug('Current settings:', settings);
 
     // Load template
     try {
@@ -318,8 +355,13 @@ async function init() {
 
     // Also watch for SillyTavern specific events if possible
     context.eventSource.on(context.eventTypes.SETTINGS_LOADED, () => {
+        logger.debug('SETTINGS_LOADED event received, re-loading settings.');
+        loadSettings();
         updateThemeColor();
     });
 }
 
-jQuery(init);
+// Run immediately since we are a module and want to apply colors as early as possible.
+// SillyTavern extensions are loaded after core scripts, so context should be ready.
+init();
+
