@@ -7,9 +7,9 @@
         <div class="inline-drawer-content">
             <div class="st-mobile-theme-color-settings-container">
                 <p class="st-mobile-theme-color-description">
-                    Set the <code>theme-color</code> and <code>background_color</code> for mobile browsers and PWAs.
+                    Set color metadata for mobile browsers and PWAs.
                 </p>
-                
+
                 <div class="st-mobile-theme-color-settings-row">
                     <label class="checkbox_label" for="st-mobile-theme-color-sync-manifest">
                         <input id="st-mobile-theme-color-sync-manifest" type="checkbox" />
@@ -20,6 +20,10 @@
                 <hr />
 
                 <!-- Theme Color Section -->
+                <p class="st-mobile-theme-color-description">
+                    <code>theme-color</code> meta tag and <code>theme_color</code> manifest.
+                </p>
+
                 <div class="st-mobile-theme-color-settings-row">
                     <label class="checkbox_label" for="st-mobile-theme-color-use-manual">
                         <input id="st-mobile-theme-color-use-manual" type="checkbox" />
@@ -46,7 +50,8 @@
                 <div class="st-mobile-theme-color-settings-group manual-group hidden">
                     <small><b data-i18n="Manual Theme Color">Manual Theme Color</b></small>
                     <div class="flex-container alignitemscenter gap1">
-                        <toolcool-color-picker id="st-mobile-theme-color-picker" color="#000000"></toolcool-color-picker>
+                        <toolcool-color-picker id="st-mobile-theme-color-picker"
+                            color="#000000"></toolcool-color-picker>
                         <span id="st-mobile-theme-color-picker-value">#000000</span>
                     </div>
                 </div>
@@ -54,6 +59,10 @@
                 <hr />
 
                 <!-- Background Color Section -->
+                <p class="st-mobile-theme-color-description">
+                    <code>background_color</code> manifest.
+                </p>
+
                 <div class="st-mobile-theme-color-settings-row">
                     <label class="checkbox_label" for="st-mobile-theme-color-use-manual-bg">
                         <input id="st-mobile-theme-color-use-manual-bg" type="checkbox" />
@@ -80,7 +89,8 @@
                 <div class="st-mobile-theme-color-settings-group bg-manual-group hidden">
                     <small><b data-i18n="Manual Background Color">Manual Background Color</b></small>
                     <div class="flex-container alignitemscenter gap1">
-                        <toolcool-color-picker id="st-mobile-theme-color-bg-picker" color="#000000"></toolcool-color-picker>
+                        <toolcool-color-picker id="st-mobile-theme-color-bg-picker"
+                            color="#000000"></toolcool-color-picker>
                         <span id="st-mobile-theme-color-bg-picker-value">#000000</span>
                     </div>
                 </div>

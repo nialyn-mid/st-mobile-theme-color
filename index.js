@@ -14,19 +14,33 @@ const getModuleName = () => {
 
 const MODULE_NAME = getModuleName();
 
+// Pre-apply last known color from localStorage to avoid flash of wrong color
+(function preApplyColor() {
+    try {
+        const lastColor = localStorage.getItem('st-mobile-theme-color-last');
+        if (lastColor) {
+            let meta = document.querySelector('meta[name="theme-color"]');
+            if (!meta) {
+                meta = document.createElement('meta');
+                meta.name = 'theme-color';
+                document.head.appendChild(meta);
+            }
+            meta.content = lastColor;
+        }
+    } catch (e) {
+        // Ignore localStorage errors
+    }
+})();
 
 const defaultSettings = {
     colorVariable: '--SmartThemeChatTintColor',
     manualColor: '#000000',
     useManual: false,
-    bgColorVariable: '--SmartThemeBodyColor',
+    bgColorVariable: '--SmartThemeChatTintColor',
     manualBgColor: '#000000',
     useManualBg: false,
     syncManifest: true,
 };
-
-
-
 
 let settings = { ...defaultSettings };
 
@@ -40,16 +54,17 @@ function rgbaToHex(rgba) {
     // Match both rgb and rgba
     const match = rgba.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
     if (!match) return rgba;
-    
+
     const r = parseInt(match[1]);
     const g = parseInt(match[2]);
     const b = parseInt(match[3]);
-    
+
     // We ignore alpha for theme-color as it's not well supported for browser UI
     return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).toUpperCase();
 }
 
 let originalManifest = null;
+let manifestBaseUrl = null;
 
 /**
  * Updates the PWA manifest theme_color and background_color.
@@ -64,7 +79,9 @@ async function updatePwaManifest(themeColor, bgColor) {
 
     if (!originalManifest) {
         try {
-            const response = await fetch(link.href);
+            const manifestUrl = new URL(link.getAttribute('href'), window.location.href).href;
+            manifestBaseUrl = manifestUrl.substring(0, manifestUrl.lastIndexOf('/') + 1);
+            const response = await fetch(manifestUrl);
             originalManifest = await response.json();
         } catch (e) {
             console.error('[Mobile Theme Color] Failed to fetch original manifest:', e);
@@ -72,37 +89,51 @@ async function updatePwaManifest(themeColor, bgColor) {
         }
     }
 
-    const updatedManifest = { 
-        ...originalManifest, 
+    const updatedManifest = {
+        ...originalManifest,
         theme_color: themeColor,
         background_color: bgColor
     };
+
+    // Normalize relative URLs in the manifest to be absolute
+    // This is because the manifest is now a blob: URL and relative paths won't resolve correctly.
+    // Normalize relative URLs in the manifest to be absolute
+    // This is because the manifest is now a blob: URL and relative paths won't resolve correctly.
+    if (updatedManifest.icons) {
+        updatedManifest.icons = updatedManifest.icons.map(icon => ({
+            ...icon,
+            src: new URL(icon.src, manifestBaseUrl).href
+        }));
+    }
+
+    if (updatedManifest.start_url) {
+        updatedManifest.start_url = new URL(updatedManifest.start_url, manifestBaseUrl).href;
+    }
+
     const blob = new Blob([JSON.stringify(updatedManifest)], { type: 'application/manifest+json' });
+
     const manifestUrl = URL.createObjectURL(blob);
-    
+
     // Revoke old object URL if it exists
     if (link.dataset.isBlob === 'true') {
         URL.revokeObjectURL(link.href);
     }
-    
+
     // Remove and re-add link to force refresh
     const newLink = link.cloneNode();
     newLink.href = manifestUrl;
     newLink.dataset.isBlob = 'true';
     link.parentNode.replaceChild(newLink, link);
-    
+
     console.log(`[Mobile Theme Color] PWA manifest updated and refreshed. Theme: ${themeColor}, BG: ${bgColor}`);
 }
-
-
-
 
 /**
  * Updates the theme-color meta tag and manifest.
  */
 function updateThemeColor() {
     const root = document.documentElement;
-    
+
     // Resolve theme color
     let themeColor;
     if (settings.useManual) {
@@ -131,12 +162,18 @@ function updateThemeColor() {
         document.head.appendChild(meta);
     }
     meta.content = themeColor;
-    
+
     console.log(`[Mobile Theme Color] Applied meta color: ${themeColor}`);
+
+    // Cache for pre-boot application
+    try {
+        localStorage.setItem('st-mobile-theme-color-last', themeColor);
+    } catch (e) {
+        // Ignore
+    }
+
     updatePwaManifest(themeColor, bgColor || themeColor);
 }
-
-
 
 /**
  * Saves the extension settings.
@@ -144,7 +181,7 @@ function updateThemeColor() {
 function saveSettings() {
     const context = getContext();
     context.extensionSettings[MODULE_NAME] = settings;
-    
+
     if (typeof context.saveSettings === 'function') {
         context.saveSettings();
     } else if (typeof window.saveSettingsApp === 'function') {
@@ -157,10 +194,10 @@ function saveSettings() {
  */
 function initSettingsUI(html) {
     const $settings = $(html);
-    
+
     // Bind "Use Manual" checkbox
     const $useManual = $settings.find('#st-mobile-theme-color-use-manual');
-    $useManual.prop('checked', settings.useManual).on('change', function() {
+    $useManual.prop('checked', settings.useManual).on('change', function () {
         settings.useManual = !!$(this).prop('checked');
         $settings.find('.variable-group').toggleClass('hidden', settings.useManual);
         $settings.find('.manual-group').toggleClass('hidden', !settings.useManual);
@@ -174,7 +211,7 @@ function initSettingsUI(html) {
 
     // Bind Variable dropdown
     const $variable = $settings.find('#st-mobile-theme-color-variable');
-    $variable.val(settings.colorVariable).on('change', function() {
+    $variable.val(settings.colorVariable).on('change', function () {
         settings.colorVariable = $(this).val();
         saveSettings();
         updateThemeColor();
@@ -183,11 +220,11 @@ function initSettingsUI(html) {
     // Bind Manual Color Picker
     const $picker = $settings.find('#st-mobile-theme-color-picker');
     const $pickerValue = $settings.find('#st-mobile-theme-color-picker-value');
-    
+
     $picker.attr('color', settings.manualColor);
     $pickerValue.text(settings.manualColor);
 
-    $picker.on('change', function(e) {
+    $picker.on('change', function (e) {
         // toolcool-color-picker emits a 'change' event with detail
         const newColor = e.detail?.hex || e.target.value;
         if (newColor) {
@@ -200,7 +237,7 @@ function initSettingsUI(html) {
 
     // --- Background Color ---
     const $useManualBg = $settings.find('#st-mobile-theme-color-use-manual-bg');
-    $useManualBg.prop('checked', settings.useManualBg).on('change', function() {
+    $useManualBg.prop('checked', settings.useManualBg).on('change', function () {
         settings.useManualBg = !!$(this).prop('checked');
         $settings.find('.bg-variable-group').toggleClass('hidden', settings.useManualBg);
         $settings.find('.bg-manual-group').toggleClass('hidden', !settings.useManualBg);
@@ -212,7 +249,7 @@ function initSettingsUI(html) {
     $settings.find('.bg-manual-group').toggleClass('hidden', !settings.useManualBg);
 
     const $bgColorVariable = $settings.find('#st-mobile-theme-color-bg-variable');
-    $bgColorVariable.val(settings.bgColorVariable).on('change', function() {
+    $bgColorVariable.val(settings.bgColorVariable).on('change', function () {
         settings.bgColorVariable = $(this).val();
         saveSettings();
         updateThemeColor();
@@ -223,7 +260,7 @@ function initSettingsUI(html) {
     $bgPicker.attr('color', settings.manualBgColor);
     $bgPickerValue.text(settings.manualBgColor);
 
-    $bgPicker.on('change', function(e) {
+    $bgPicker.on('change', function (e) {
         const newColor = e.detail?.hex || e.target.value;
         if (newColor) {
             settings.manualBgColor = newColor;
@@ -235,7 +272,7 @@ function initSettingsUI(html) {
 
     // --- Manifest Sync ---
     const $syncManifest = $settings.find('#st-mobile-theme-color-sync-manifest');
-    $syncManifest.prop('checked', settings.syncManifest).on('change', function() {
+    $syncManifest.prop('checked', settings.syncManifest).on('change', function () {
         settings.syncManifest = !!$(this).prop('checked');
         saveSettings();
         updateThemeColor();
@@ -250,7 +287,7 @@ function initSettingsUI(html) {
  */
 async function init() {
     const context = getContext();
-    
+
     // Load settings
     if (context.extensionSettings[MODULE_NAME]) {
         settings = Object.assign(settings, context.extensionSettings[MODULE_NAME]);
@@ -272,11 +309,11 @@ async function init() {
     const observer = new MutationObserver(() => {
         updateThemeColor();
     });
-    
+
     // Observe changes to documentElement (for CSS variable updates)
-    observer.observe(document.documentElement, { 
-        attributes: true, 
-        attributeFilter: ['style', 'class'] 
+    observer.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ['style', 'class']
     });
 
     // Also watch for SillyTavern specific events if possible
