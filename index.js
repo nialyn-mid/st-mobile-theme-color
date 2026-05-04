@@ -19,7 +19,9 @@ const defaultSettings = {
     colorVariable: '--SmartThemeChatTintColor',
     manualColor: '#000000',
     useManual: false,
+    syncManifest: true,
 };
+
 
 
 let settings = { ...defaultSettings };
@@ -42,6 +44,43 @@ function rgbaToHex(rgba) {
     // We ignore alpha for theme-color as it's not well supported for browser UI
     return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).toUpperCase();
 }
+
+let originalManifest = null;
+
+/**
+ * Updates the PWA manifest theme_color.
+ * @param {string} color - The color to set in the manifest.
+ */
+async function updatePwaManifest(color) {
+    if (!settings.syncManifest) return;
+
+    const link = document.querySelector('link[rel="manifest"]');
+    if (!link) return;
+
+    if (!originalManifest) {
+        try {
+            const response = await fetch(link.href);
+            originalManifest = await response.json();
+        } catch (e) {
+            console.error('[Mobile Theme Color] Failed to fetch original manifest:', e);
+            return;
+        }
+    }
+
+    const updatedManifest = { ...originalManifest, theme_color: color };
+    const blob = new Blob([JSON.stringify(updatedManifest)], { type: 'application/json' });
+    const manifestUrl = URL.createObjectURL(blob);
+    
+    // Revoke old object URL if it exists
+    if (link.dataset.isBlob === 'true') {
+        URL.revokeObjectURL(link.href);
+    }
+    
+    link.href = manifestUrl;
+    link.dataset.isBlob = 'true';
+    console.log(`[Mobile Theme Color] PWA manifest updated with color: ${color}`);
+}
+
 
 /**
  * Updates the theme-color meta tag.
@@ -66,7 +105,9 @@ function updateThemeColor() {
     }
     meta.content = color;
     console.log(`[Mobile Theme Color] Applied color: ${color}`);
+    updatePwaManifest(color);
 }
+
 
 /**
  * Saves the extension settings.
@@ -128,7 +169,16 @@ function initSettingsUI(html) {
         }
     });
 
+    // Bind "Sync Manifest" checkbox
+    const $syncManifest = $settings.find('#st-mobile-theme-color-sync-manifest');
+    $syncManifest.prop('checked', settings.syncManifest).on('change', function() {
+        settings.syncManifest = !!$(this).prop('checked');
+        saveSettings();
+        updateThemeColor();
+    });
+
     $('#extensions_settings').append($settings);
+
 }
 
 /**
