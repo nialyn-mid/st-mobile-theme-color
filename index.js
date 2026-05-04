@@ -95,7 +95,7 @@ function updateThemeColor() {
     }
 
 
-    // Cache for pre-boot application (used by the server-side injected script)
+    // Cache for pre-boot application (legacy fallback)
     try {
         localStorage.setItem('st-mobile-theme-color-last', themeColor);
         if (bgColor) {
@@ -105,7 +105,34 @@ function updateThemeColor() {
         // Ignore
     }
 
+    // Sync with server plugin for persistent manifest update
+    if (currentState === STATE.READY) {
+        syncWithServer(themeColor, bgColor || themeColor);
+    }
+
     logger.info(`Resolved and cached color: ${themeColor}`);
+}
+
+/**
+ * Synchronizes the colors with the server-side manifest.
+ */
+async function syncWithServer(themeColor, bgColor) {
+    try {
+        const params = new URLSearchParams({
+            themeColor: themeColor || '',
+            bgColor: bgColor || themeColor || ''
+        });
+        
+        const response = await fetch(`/api/plugins/st-mobile-theme-color/sync?${params.toString()}`);
+        
+        if (response.ok) {
+            logger.debug('Server manifest synchronized.');
+        } else {
+            logger.warn('Failed to synchronize manifest with server.');
+        }
+    } catch (e) {
+        logger.error('Error syncing with server:', e);
+    }
 }
 
 /**

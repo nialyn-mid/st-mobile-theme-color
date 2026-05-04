@@ -3,58 +3,80 @@ const path = require('path');
 
 /**
  * Server-side plugin for Mobile Theme Color extension.
- * Provides a status API and helper functions.
+ * Provides a status API and an atomic manifest synchronization system.
  */
+
+// Cache the SillyTavern root path
+// In ST, plugins are in /plugins/folder/index.cjs
+// So we go up 2 levels to reach the root
+const stRoot = path.resolve(__dirname, '..', '..');
+const manifestPath = path.resolve(stRoot, 'public', 'manifest.json');
+
+/**
+ * Safely updates the public/manifest.json file with new colors.
+ * @param {string} themeColor - Hex color code
+ * @param {string} bgColor - Hex color code
+ */
+function atomicUpdateManifest(themeColor, bgColor) {
+    try {
+        if (!fs.existsSync(manifestPath)) {
+            console.error('[Mobile Theme Color] manifest.json not found at:', manifestPath);
+            return false;
+        }
+
+        const raw = fs.readFileSync(manifestPath, 'utf8');
+        const manifest = JSON.parse(raw);
+
+        // Update only the specific fields
+        if (themeColor) manifest.theme_color = themeColor;
+        if (bgColor) manifest.background_color = bgColor;
+
+        // Verify JSON integrity before writing
+        const updatedRaw = JSON.stringify(manifest, null, 4);
+        JSON.parse(updatedRaw); // Final sanity check
+
+        fs.writeFileSync(manifestPath, updatedRaw, 'utf8');
+        console.log(`[Mobile Theme Color] Successfully updated manifest.json: Theme=${themeColor}, BG=${bgColor}`);
+        return true;
+    } catch (e) {
+        console.error('[Mobile Theme Color] Failed to update manifest.json:', e.message);
+        return false;
+    }
+}
 
 /**
  * Initialize plugin.
  * @param {import('express').Router} router Express router
- * @returns {Promise<void>}
  */
 async function init(router) {
-    // Status endpoint for the frontend to verify the plugin is active
+    console.log('[Mobile Theme Color] Initializing server plugin...');
+    console.log('[Mobile Theme Color] Target manifest path:', manifestPath);
+
+    // Status endpoint
     router.get('/status', (req, res) => {
         res.send({
             status: 'ok',
-            version: '1.0.1',
-            message: 'Mobile Theme Color server component is active'
+            version: '1.2.0',
+            manifestExists: fs.existsSync(manifestPath),
+            path: manifestPath
         });
     });
 
-    // Cache for the original manifest
-    let cachedManifest = null;
-
-    // Manifest endpoint
-    router.get('/manifest.json', (req, res) => {
-        try {
-            // Find the original manifest (relative to ST root)
-            // __dirname is SillyTavern/plugins/st-mobile-theme-color
-            const stRoot = path.join(__dirname, '..', '..');
-            const manifestPath = path.join(stRoot, 'public', 'manifest.json');
-            
-            if (!cachedManifest && fs.existsSync(manifestPath)) {
-                cachedManifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
-            }
-
-            if (!cachedManifest) {
-                return res.status(404).send('Original manifest not found');
-            }
-
-            // Merge colors from query parameters
-            const themeColor = req.query.color;
-            const bgColor = req.query.bg;
-
-            const finalManifest = { ...cachedManifest };
-            if (themeColor) finalManifest.theme_color = themeColor;
-            if (bgColor) finalManifest.background_color = bgColor;
-
-            res.json(finalManifest);
-        } catch (e) {
-            res.status(500).send(e.message);
+    // Update endpoint (GET version to avoid CSRF issues)
+    router.get('/sync', (req, res) => {
+        const { themeColor, bgColor } = req.query;
+        
+        console.log(`[Mobile Theme Color] Sync request received: Theme=${themeColor}, BG=${bgColor}`);
+        
+        if (!themeColor && !bgColor) {
+            return res.status(400).send({ error: 'No colors provided' });
         }
+
+        const success = atomicUpdateManifest(themeColor, bgColor);
+        res.send({ success });
     });
 
-    console.log('[Mobile Theme Color] Server plugin initialized with dynamic manifest support.');
+    console.log('[Mobile Theme Color] Server plugin initialized. Manifest sync ready.');
     return Promise.resolve();
 }
 
@@ -68,6 +90,6 @@ module.exports = {
     info: {
         id: 'st-mobile-theme-color',
         name: 'Mobile Theme Color Helper',
-        description: 'Server-side support for early theme color injection and settings synchronization.',
+        description: 'Server-side manifest synchronization for zero-flash PWA theming.',
     },
 };
