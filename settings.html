@@ -1,0 +1,46 @@
+<div id="st-mobile-theme-color-settings">
+    <div class="inline-drawer">
+        <div class="inline-drawer-toggle inline-drawer-header">
+            <b data-i18n="Mobile Theme Color">Mobile Theme Color</b>
+            <div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div>
+        </div>
+        <div class="inline-drawer-content">
+            <div class="st-mobile-theme-color-settings-container">
+                <p class="st-mobile-theme-color-description">
+                    Set the <code>theme-color</code> meta tag for mobile browsers.
+                </p>
+                
+                <div class="st-mobile-theme-color-settings-row">
+                    <label class="checkbox_label" for="st-mobile-theme-color-use-manual">
+                        <input id="st-mobile-theme-color-use-manual" type="checkbox" />
+                        <span data-i18n="Manual color override">Manual color override</span>
+                    </label>
+                </div>
+
+                <div class="st-mobile-theme-color-settings-group variable-group">
+                    <small><b data-i18n="Theme Variable">Theme Variable</b></small>
+                    <select id="st-mobile-theme-color-variable" class="text_pole">
+                        <option value="--SmartThemeBodyColor">Body Color</option>
+                        <option value="--SmartThemeEmColor">Emphasis Color</option>
+                        <option value="--SmartThemeUnderlineColor">Underline Color</option>
+                        <option value="--SmartThemeQuoteColor">Quote Color</option>
+                        <option value="--SmartThemeBlurTintColor">Blur Tint</option>
+                        <option value="--SmartThemeChatTintColor">Chat Tint</option>
+                        <option value="--SmartThemeUserMesBlurTintColor">User Message Blur Tint</option>
+                        <option value="--SmartThemeBotMesBlurTintColor">Bot Message Blur Tint</option>
+                        <option value="--SmartThemeShadowColor">Shadow Color</option>
+                        <option value="--SmartThemeBorderColor">Border Color</option>
+                    </select>
+                </div>
+
+                <div class="st-mobile-theme-color-settings-group manual-group hidden">
+                    <small><b data-i18n="Manual Color">Manual Color</b></small>
+                    <div class="flex-container alignitemscenter gap1">
+                        <toolcool-color-picker id="st-mobile-theme-color-picker" color="#000000"></toolcool-color-picker>
+                        <span id="st-mobile-theme-color-picker-value">#000000</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

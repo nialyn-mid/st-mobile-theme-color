@@ -1,0 +1,38 @@
+.st-mobile-theme-color-settings-container {
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.st-mobile-theme-color-description {
+    opacity: 0.8;
+    font-size: 0.9em;
+    margin-bottom: 5px;
+}
+
+.st-mobile-theme-color-settings-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.st-mobile-theme-color-settings-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.st-mobile-theme-color-settings-group.hidden {
+    display: none;
+}
+
+#st-mobile-theme-color-picker {
+    --toolcool-color-picker-btn-width: 40px;
+    --toolcool-color-picker-btn-height: 40px;
+}
+
+#st-mobile-theme-color-picker-value {
+    font-family: var(--mono-font-family, monospace);
+    font-size: 1.1em;
+}

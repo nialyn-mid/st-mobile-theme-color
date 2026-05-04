@@ -1,11 +1,11 @@
 {
-  "display_name": "Mobile Theme Color",
-  "loading_order": 20,
-  "requires": [],
-  "optional": [],
-  "js": "index.js",
-  "css": "style.css",
-  "author": "Nialyn Mid",
-  "version": "0.0.1",
-  "homePage": "https://github.com/nialyn-mid/st-mobile-theme-color"
-}
+    "display_name": "Mobile Theme Color",
+    "loading_order": 50,
+    "requires": [],
+    "optional": [],
+    "js": "index.js",
+    "css": "style.css",
+    "author": "Antigravity",
+    "version": "1.0.0",
+    "homePage": "https://github.com/SillyTavern/SillyTavern"
+}
