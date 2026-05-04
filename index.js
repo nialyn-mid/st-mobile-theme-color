@@ -19,8 +19,12 @@ const defaultSettings = {
     colorVariable: '--SmartThemeChatTintColor',
     manualColor: '#000000',
     useManual: false,
+    bgColorVariable: '--SmartThemeBodyColor',
+    manualBgColor: '#000000',
+    useManualBg: false,
     syncManifest: true,
 };
+
 
 
 
@@ -48,10 +52,11 @@ function rgbaToHex(rgba) {
 let originalManifest = null;
 
 /**
- * Updates the PWA manifest theme_color.
- * @param {string} color - The color to set in the manifest.
+ * Updates the PWA manifest theme_color and background_color.
+ * @param {string} themeColor - The theme color.
+ * @param {string} bgColor - The background color.
  */
-async function updatePwaManifest(color) {
+async function updatePwaManifest(themeColor, bgColor) {
     if (!settings.syncManifest) return;
 
     const link = document.querySelector('link[rel="manifest"]');
@@ -67,8 +72,12 @@ async function updatePwaManifest(color) {
         }
     }
 
-    const updatedManifest = { ...originalManifest, theme_color: color };
-    const blob = new Blob([JSON.stringify(updatedManifest)], { type: 'application/json' });
+    const updatedManifest = { 
+        ...originalManifest, 
+        theme_color: themeColor,
+        background_color: bgColor
+    };
+    const blob = new Blob([JSON.stringify(updatedManifest)], { type: 'application/manifest+json' });
     const manifestUrl = URL.createObjectURL(blob);
     
     // Revoke old object URL if it exists
@@ -76,37 +85,57 @@ async function updatePwaManifest(color) {
         URL.revokeObjectURL(link.href);
     }
     
-    link.href = manifestUrl;
-    link.dataset.isBlob = 'true';
-    console.log(`[Mobile Theme Color] PWA manifest updated with color: ${color}`);
+    // Remove and re-add link to force refresh
+    const newLink = link.cloneNode();
+    newLink.href = manifestUrl;
+    newLink.dataset.isBlob = 'true';
+    link.parentNode.replaceChild(newLink, link);
+    
+    console.log(`[Mobile Theme Color] PWA manifest updated and refreshed. Theme: ${themeColor}, BG: ${bgColor}`);
 }
 
 
+
+
 /**
- * Updates the theme-color meta tag.
+ * Updates the theme-color meta tag and manifest.
  */
 function updateThemeColor() {
-    let color;
+    const root = document.documentElement;
+    
+    // Resolve theme color
+    let themeColor;
     if (settings.useManual) {
-        color = settings.manualColor;
+        themeColor = settings.manualColor;
     } else {
-        const root = document.documentElement;
         const rawColor = getComputedStyle(root).getPropertyValue(settings.colorVariable).trim();
-        color = rgbaToHex(rawColor);
+        themeColor = rgbaToHex(rawColor);
     }
 
-    if (!color) return;
+    // Resolve background color
+    let bgColor;
+    if (settings.useManualBg) {
+        bgColor = settings.manualBgColor;
+    } else {
+        const rawBgColor = getComputedStyle(root).getPropertyValue(settings.bgColorVariable).trim();
+        bgColor = rgbaToHex(rawBgColor);
+    }
 
+    if (!themeColor) return;
+
+    // Update meta tag
     let meta = document.querySelector('meta[name="theme-color"]');
     if (!meta) {
         meta = document.createElement('meta');
         meta.name = 'theme-color';
         document.head.appendChild(meta);
     }
-    meta.content = color;
-    console.log(`[Mobile Theme Color] Applied color: ${color}`);
-    updatePwaManifest(color);
+    meta.content = themeColor;
+    
+    console.log(`[Mobile Theme Color] Applied meta color: ${themeColor}`);
+    updatePwaManifest(themeColor, bgColor || themeColor);
 }
+
 
 
 /**
@@ -169,7 +198,42 @@ function initSettingsUI(html) {
         }
     });
 
-    // Bind "Sync Manifest" checkbox
+    // --- Background Color ---
+    const $useManualBg = $settings.find('#st-mobile-theme-color-use-manual-bg');
+    $useManualBg.prop('checked', settings.useManualBg).on('change', function() {
+        settings.useManualBg = !!$(this).prop('checked');
+        $settings.find('.bg-variable-group').toggleClass('hidden', settings.useManualBg);
+        $settings.find('.bg-manual-group').toggleClass('hidden', !settings.useManualBg);
+        saveSettings();
+        updateThemeColor();
+    });
+
+    $settings.find('.bg-variable-group').toggleClass('hidden', settings.useManualBg);
+    $settings.find('.bg-manual-group').toggleClass('hidden', !settings.useManualBg);
+
+    const $bgColorVariable = $settings.find('#st-mobile-theme-color-bg-variable');
+    $bgColorVariable.val(settings.bgColorVariable).on('change', function() {
+        settings.bgColorVariable = $(this).val();
+        saveSettings();
+        updateThemeColor();
+    });
+
+    const $bgPicker = $settings.find('#st-mobile-theme-color-bg-picker');
+    const $bgPickerValue = $settings.find('#st-mobile-theme-color-bg-picker-value');
+    $bgPicker.attr('color', settings.manualBgColor);
+    $bgPickerValue.text(settings.manualBgColor);
+
+    $bgPicker.on('change', function(e) {
+        const newColor = e.detail?.hex || e.target.value;
+        if (newColor) {
+            settings.manualBgColor = newColor;
+            $bgPickerValue.text(newColor);
+            saveSettings();
+            updateThemeColor();
+        }
+    });
+
+    // --- Manifest Sync ---
     const $syncManifest = $settings.find('#st-mobile-theme-color-sync-manifest');
     $syncManifest.prop('checked', settings.syncManifest).on('change', function() {
         settings.syncManifest = !!$(this).prop('checked');

@@ -7,20 +7,25 @@
         <div class="inline-drawer-content">
             <div class="st-mobile-theme-color-settings-container">
                 <p class="st-mobile-theme-color-description">
-                    Set the <code>theme-color</code> meta tag for mobile browsers.
+                    Set the <code>theme-color</code> and <code>background_color</code> for mobile browsers and PWAs.
                 </p>
                 
                 <div class="st-mobile-theme-color-settings-row">
-                    <label class="checkbox_label" for="st-mobile-theme-color-use-manual">
-                        <input id="st-mobile-theme-color-use-manual" type="checkbox" />
-                        <span data-i18n="Manual color override">Manual color override</span>
-                    </label>
                     <label class="checkbox_label" for="st-mobile-theme-color-sync-manifest">
                         <input id="st-mobile-theme-color-sync-manifest" type="checkbox" />
                         <span data-i18n="Sync PWA manifest">Sync PWA manifest</span>
                     </label>
                 </div>
 
+                <hr />
+
+                <!-- Theme Color Section -->
+                <div class="st-mobile-theme-color-settings-row">
+                    <label class="checkbox_label" for="st-mobile-theme-color-use-manual">
+                        <input id="st-mobile-theme-color-use-manual" type="checkbox" />
+                        <span data-i18n="Manual theme color">Manual theme color</span>
+                    </label>
+                </div>
 
                 <div class="st-mobile-theme-color-settings-group variable-group">
                     <small><b data-i18n="Theme Variable">Theme Variable</b></small>
@@ -39,10 +44,44 @@
                 </div>
 
                 <div class="st-mobile-theme-color-settings-group manual-group hidden">
-                    <small><b data-i18n="Manual Color">Manual Color</b></small>
+                    <small><b data-i18n="Manual Theme Color">Manual Theme Color</b></small>
                     <div class="flex-container alignitemscenter gap1">
                         <toolcool-color-picker id="st-mobile-theme-color-picker" color="#000000"></toolcool-color-picker>
                         <span id="st-mobile-theme-color-picker-value">#000000</span>
+                    </div>
+                </div>
+
+                <hr />
+
+                <!-- Background Color Section -->
+                <div class="st-mobile-theme-color-settings-row">
+                    <label class="checkbox_label" for="st-mobile-theme-color-use-manual-bg">
+                        <input id="st-mobile-theme-color-use-manual-bg" type="checkbox" />
+                        <span data-i18n="Manual background color">Manual background color</span>
+                    </label>
+                </div>
+
+                <div class="st-mobile-theme-color-settings-group bg-variable-group">
+                    <small><b data-i18n="Background Variable">Background Variable</b></small>
+                    <select id="st-mobile-theme-color-bg-variable" class="text_pole">
+                        <option value="--SmartThemeBodyColor">Body Color</option>
+                        <option value="--SmartThemeEmColor">Emphasis Color</option>
+                        <option value="--SmartThemeUnderlineColor">Underline Color</option>
+                        <option value="--SmartThemeQuoteColor">Quote Color</option>
+                        <option value="--SmartThemeBlurTintColor">Blur Tint</option>
+                        <option value="--SmartThemeChatTintColor">Chat Tint</option>
+                        <option value="--SmartThemeUserMesBlurTintColor">User Message Blur Tint</option>
+                        <option value="--SmartThemeBotMesBlurTintColor">Bot Message Blur Tint</option>
+                        <option value="--SmartThemeShadowColor">Shadow Color</option>
+                        <option value="--SmartThemeBorderColor">Border Color</option>
+                    </select>
+                </div>
+
+                <div class="st-mobile-theme-color-settings-group bg-manual-group hidden">
+                    <small><b data-i18n="Manual Background Color">Manual Background Color</b></small>
+                    <div class="flex-container alignitemscenter gap1">
+                        <toolcool-color-picker id="st-mobile-theme-color-bg-picker" color="#000000"></toolcool-color-picker>
+                        <span id="st-mobile-theme-color-bg-picker-value">#000000</span>
                     </div>
                 </div>
             </div>
