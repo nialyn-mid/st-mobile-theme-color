@@ -25,6 +25,7 @@ const defaultSettings = {
     manualBgColor: '#000000',
     useManualBg: false,
     syncManifest: true,
+    serverDebug: false,
     logLevel: LOG_LEVELS.WARN,
 };
 
@@ -126,7 +127,8 @@ async function syncWithServer(themeColor, bgColor) {
     try {
         const params = new URLSearchParams({
             themeColor: themeColor || '',
-            bgColor: bgColor || themeColor || ''
+            bgColor: bgColor || themeColor || '',
+            debug: settings.serverDebug ? 'true' : 'false'
         });
         
         const response = await fetch(`/api/plugins/st-mobile-theme-color/sync?${params.toString()}`);
@@ -246,6 +248,14 @@ function initSettingsUI(html) {
         settings.syncManifest = !!$(this).prop('checked');
         saveSettings();
         updateThemeColor();
+    });
+
+    // --- Server Debug ---
+    const $serverDebug = $settings.find('#st-mobile-theme-color-server-debug');
+    $serverDebug.prop('checked', settings.serverDebug).on('change', function () {
+        settings.serverDebug = !!$(this).prop('checked');
+        saveSettings();
+        updateThemeColor(); // This triggers syncWithServer
     });
 
     // Bind "Log Level" dropdown

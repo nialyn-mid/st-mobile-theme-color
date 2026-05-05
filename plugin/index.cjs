@@ -12,6 +12,8 @@ const path = require('path');
 const stRoot = path.resolve(__dirname, '..', '..');
 const manifestPath = path.resolve(stRoot, 'public', 'manifest.json');
 
+let debugMode = false;
+
 /**
  * Safely updates the public/manifest.json file with new colors.
  * @param {string} themeColor - Hex color code
@@ -20,7 +22,7 @@ const manifestPath = path.resolve(stRoot, 'public', 'manifest.json');
 function atomicUpdateManifest(themeColor, bgColor) {
     try {
         if (!fs.existsSync(manifestPath)) {
-            console.error('[Mobile Theme Color] manifest.json not found at:', manifestPath);
+            if (debugMode) console.error('[Mobile Theme Color] manifest.json not found at:', manifestPath);
             return false;
         }
 
@@ -36,7 +38,7 @@ function atomicUpdateManifest(themeColor, bgColor) {
         JSON.parse(updatedRaw); // Final sanity check
 
         fs.writeFileSync(manifestPath, updatedRaw, 'utf8');
-        console.log(`[Mobile Theme Color] Successfully updated manifest.json: Theme=${themeColor}, BG=${bgColor}`);
+        if (debugMode) console.log(`[Mobile Theme Color] Successfully updated manifest.json: Theme=${themeColor}, BG=${bgColor}`);
         return true;
     } catch (e) {
         console.error('[Mobile Theme Color] Failed to update manifest.json:', e.message);
@@ -49,34 +51,39 @@ function atomicUpdateManifest(themeColor, bgColor) {
  * @param {import('express').Router} router Express router
  */
 async function init(router) {
-    console.log('[Mobile Theme Color] Initializing server plugin...');
-    console.log('[Mobile Theme Color] Target manifest path:', manifestPath);
+    console.log('[Mobile Theme Color] Server plugin loaded.');
 
     // Status endpoint
     router.get('/status', (req, res) => {
         res.send({
             status: 'ok',
-            version: '1.2.0',
+            version: '1.2.1',
             manifestExists: fs.existsSync(manifestPath),
-            path: manifestPath
+            debugMode
         });
     });
 
     // Update endpoint (GET version to avoid CSRF issues)
     router.get('/sync', (req, res) => {
-        const { themeColor, bgColor } = req.query;
+        const { themeColor, bgColor, debug } = req.query;
         
-        console.log(`[Mobile Theme Color] Sync request received: Theme=${themeColor}, BG=${bgColor}`);
+        // Update debug mode if provided
+        if (debug !== undefined) {
+            debugMode = debug === 'true' || debug === true;
+        }
+
+        if (debugMode) {
+            console.log(`[Mobile Theme Color] Sync request received: Theme=${themeColor}, BG=${bgColor}, Debug=${debugMode}`);
+        }
         
         if (!themeColor && !bgColor) {
-            return res.status(400).send({ error: 'No colors provided' });
+            return res.status(200).send({ success: true, debugMode }); // Just updated debug mode
         }
 
         const success = atomicUpdateManifest(themeColor, bgColor);
-        res.send({ success });
+        res.send({ success, debugMode });
     });
 
-    console.log('[Mobile Theme Color] Server plugin initialized. Manifest sync ready.');
     return Promise.resolve();
 }
 
