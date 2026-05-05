@@ -41,7 +41,7 @@ const STATE = {
 };
 
 // Minimum version of the server plugin required by this frontend version
-const REQUIRED_SERVER_VERSION = '1.2.0';
+const REQUIRED_SERVER_VERSION = '1.2.1';
 
 let currentState = STATE.MISSING;
 let installedServerVersion = '0.0.0';
@@ -114,7 +114,7 @@ function updateThemeColor() {
 
     // Sync with server plugin for persistent manifest update
     if (currentState === STATE.READY) {
-        syncWithServer(themeColor, bgColor || themeColor);
+        syncWithServer(themeColor, bgColor);
     }
 
     logger.info(`Resolved and cached color: ${themeColor}`);
@@ -130,9 +130,9 @@ async function syncWithServer(themeColor, bgColor) {
             bgColor: bgColor || themeColor || '',
             debug: settings.serverDebug ? 'true' : 'false'
         });
-        
+
         const response = await fetch(`/api/plugins/st-mobile-theme-color/sync?${params.toString()}`);
-        
+
         if (response.ok) {
             logger.debug('Server manifest synchronized.');
         } else {
@@ -280,13 +280,13 @@ function initSettingsUI(html) {
 function getInstallCommand() {
     const isWin = navigator.platform.includes('Win');
     const slash = isWin ? '\\' : '/';
-    
+
     // Most users run commands from the ST root
     let fullModuleName = MODULE_NAME;
     if (isWin) {
         fullModuleName = fullModuleName.replace(/\//g, '\\');
     }
-    
+
     const relPath = `public${slash}scripts${slash}extensions${slash}${fullModuleName}${slash}install${slash}install-plugin.cjs`;
     return `node ${relPath}`;
 }
@@ -301,7 +301,7 @@ async function checkPluginStatus() {
         if (response.ok) {
             const data = await response.json();
             installedServerVersion = data.version || '1.0.0';
-            
+
             // Compare versions
             if (installedServerVersion < REQUIRED_SERVER_VERSION) {
                 logger.info(`Server plugin out of date. Installed: ${installedServerVersion}, Required: ${REQUIRED_SERVER_VERSION}`);
@@ -313,7 +313,7 @@ async function checkPluginStatus() {
     } catch (e) {
         // Network error or missing plugin
     }
-    
+
     return STATE.MISSING;
 }
 
@@ -323,19 +323,19 @@ async function checkPluginStatus() {
 async function updateSetupUI() {
     const status = await checkPluginStatus();
     currentState = status;
-    
+
     const container = document.getElementById('st-mobile-theme-color-settings');
     if (!container) return;
-    
+
     const states = ['ready', 'missing', 'restart', 'update', 'disabled'];
     states.forEach(s => {
         const el = document.getElementById(`st-mobile-theme-color-state-${s}`);
         if (el) el.classList.add('hidden');
     });
-    
+
     const currentEl = document.getElementById(`st-mobile-theme-color-state-${status}`);
     if (currentEl) currentEl.classList.remove('hidden');
-    
+
     // Show/hide main settings
     const mainSettings = document.getElementById('st-mobile-theme-color-main-settings');
     if (mainSettings) {
@@ -345,7 +345,7 @@ async function updateSetupUI() {
             mainSettings.classList.remove('hidden'); // Still allow manual settings even if plugin missing
         }
     }
-    
+
     // Update command text
     const cmdText = getInstallCommand();
     const cmdEls = document.querySelectorAll('.st-mobile-theme-color-command');
@@ -356,7 +356,7 @@ async function updateSetupUI() {
 
 async function init() {
     // Setup Center events
-    jQuery(document).on('click', '.st-mobile-theme-color-copy-btn', function() {
+    jQuery(document).on('click', '.st-mobile-theme-color-copy-btn', function () {
         const cmd = getInstallCommand();
         navigator.clipboard.writeText(cmd);
         toastr.success('Command copied to clipboard!');
@@ -366,7 +366,7 @@ async function init() {
     updateSetupUI();
 
     // Re-check when the drawer is opened
-    jQuery(document).on('click', '.inline-drawer-toggle', function() {
+    jQuery(document).on('click', '.inline-drawer-toggle', function () {
         if (jQuery(this).closest('#st-mobile-theme-color-settings').length) {
             updateSetupUI();
         }
@@ -381,7 +381,7 @@ async function init() {
         // Try exact match, then try fallback to just the folder name
         const folderName = MODULE_NAME.split('/').pop();
         const savedSettings = context.extensionSettings[MODULE_NAME] || context.extensionSettings[folderName];
-        
+
         if (savedSettings) {
             logger.info('Loaded settings for', MODULE_NAME, savedSettings);
             settings = Object.assign(settings, savedSettings);
